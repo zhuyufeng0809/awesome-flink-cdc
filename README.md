@@ -1,4 +1,4 @@
-## Mysql to Mysql data-sync base on Flink Cdc
+## Mysql to Mysql realtime data-sync base on Flink Cdc
 
 ### 原理
 
