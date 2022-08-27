@@ -39,25 +39,41 @@ public class Column {
     }
 
     private LocalDate parseToDate(Object value) {
-        return LocalDate.parse("1970-01-01").plusDays(Long.parseLong(value.toString()));
+        if (value == null) {
+            return null;
+        } else {
+            return LocalDate.parse("1970-01-01").plusDays(Long.parseLong(value.toString()));
+        }
     }
 
     private LocalTime parseToTime(Object value) {
         // cause LocalTime does not provide `plusMicro` method,
         // so need convert micro to nanos
-        return LocalTime.parse("00:00:00").plusNanos(Long.parseLong(value.toString()) * 1000);
+        if (value == null) {
+            return null;
+        } else {
+            return LocalTime.parse("00:00:00").plusNanos(Long.parseLong(value.toString()) * 1000);
+        }
     }
 
     private LocalDateTime parseFromMilliSeconds(Object value) {
         // cause LocalTime does not provide `plusMicro` method,
         // so need convert micro to nanos
-        return LocalDateTime.parse("1970-01-01T00:00:00").plusNanos(Long.parseLong(value.toString()) * 1000 * 1000);
+        if (value == null) {
+            return null;
+        } else {
+            return LocalDateTime.parse("1970-01-01T00:00:00").plusNanos(Long.parseLong(value.toString()) * 1000 * 1000);
+        }
     }
 
     private LocalDateTime parseFromMicroseconds(Object value) {
         // cause LocalTime does not provide `plusMicro` method,
         // so need convert micro to nanos
-        return LocalDateTime.parse("1970-01-01T00:00:00").plusNanos(Long.parseLong(value.toString()) * 1000);
+        if (value == null) {
+            return null;
+        } else {
+            return LocalDateTime.parse("1970-01-01T00:00:00").plusNanos(Long.parseLong(value.toString()) * 1000);
+        }
     }
 
     public String getTemporalSemanticType() {

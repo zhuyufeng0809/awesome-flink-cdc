@@ -9,7 +9,6 @@ import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 
 import com.google.common.collect.Lists;
-import com.leqee.etl.internal.TableInfo;
 import com.leqee.etl.util.JsonConvertor;
 
 import java.sql.Connection;
@@ -120,11 +119,11 @@ public class MysqlKeySelector extends RichKeySelector<String, Optional<String>> 
     }
 
     private String getSchema(String json) throws Exception {
-        return this.convertor.extractSchema(json);
+        return JsonConvertor.extractSchema(json);
     }
 
     private String getTableName(String json) throws Exception {
-        return this.convertor.extractTableName(json);
+        return JsonConvertor.extractTableName(json);
     }
 
     private List<String> getKeyColumns(String fullPathName) {
@@ -132,7 +131,7 @@ public class MysqlKeySelector extends RichKeySelector<String, Optional<String>> 
     }
 
     private Optional<String> extractValue(String json, String column) {
-        return this.convertor.extractValue(json, column);
+        return JsonConvertor.extractValue(json, column);
     }
 
     private boolean contain(String fullPathName) {

@@ -1,6 +1,16 @@
+## Mysql to Mysql data-sync base on Flink Cdc
+
 ### 原理
 
+```java
+// todo
+```
+
 #### 并发与线程同步
+
+```java
+// todo
+```
 
 ### 优势与特性
 
@@ -10,7 +20,7 @@
   
 * 简化部署，减少资源占用
 
-  使用Debezium做CDC需要部署Kafka集群，需要部署生产者（Debezium）和消费者（Flink Job）两个应用，使用Flink CDC无需部署Kafka，只需要一个应用（Flink Job）
+  使用Debezium做CDC需要部署Kafka集群和Kafka Connect集群，需要部署生产者（Debezium）和消费者（Flink Job）两个应用，使用Flink CDC无需部署Kafka，只需要一个应用（Flink Job）即可
 
 * 消息格式定制化
 
@@ -27,7 +37,10 @@
 
 * 并发写入
 
-  多线程并发写入数据库，每个线程负责一个Table，Table之间互不影响
+  多线程并发写入数据库，每次Flush由一个线程负责一个Table，Table之间互不影响。这样设计的意义有两点：
+
+  1. 当一个表在目标库执行长时间事务或者DDL时，不会影响其他表的数据同步
+  2. 提高吞吐量
 
 * 自动创建目标表
 
@@ -35,7 +48,7 @@
 
 * 处理删除和清空
 
-  将Delete和Truncate操作转换为更新逻辑删除字段
+  将`Delete`和`Truncate`操作转换为更新逻辑删除字段
 
 * 完美处理时间类型
 
@@ -43,23 +56,27 @@
 
 * 动态增减表
 
-### Todo
+* 支持`Schema evolution`
 
-* Schema evolution
-  
-  可直接拿到源库DDL变更语句，更简洁优雅地处理Schema变更
-  
-  Drop table
-  
-  唯一键变更
-  
-  表名变更
-  
-  truncate
+  可直接拿到源库DDL变更语句，更简洁优雅地处理Schema变更。可处理各种五花八门的DDL语句，包括：
+
+  * `Drop table`
+  * `Unique Key`变更
+  * `Table name`变更
+  * `Truncate`操作
+  * ...
+
+### How to use
+
+```java
+// todo
+```
+
+### Todo
 
 ### To be resolved
 
-1. end to end exactly-once
+1. `end to end exactly-once`
    
    如果想完美处理DDL（保证端到端的精准一次），需要Flink框架层面的支持，用户层面无法**完美**处理DDL。因为DDL语句不具备幂等性质，且MySQL的DDL语句是无事务的，所以无法保证端到端的精准一次
 
@@ -72,7 +89,7 @@
    2. 如果唯一键和主键都没有，则该表所有数据都发送到subtask-0处理
 
 
-   此方案处理DDL时可能有数据一致性问题，并且端到端精准一次同样很难保证
+   此方案处理DDL时可能有数据一致性问题，并且端到端精准一次同样很难保证，还需要考虑唯一键字段为null的情况
 
 3. 动态修改配置
 
@@ -93,3 +110,5 @@
    支持双写到MySQL和Kafka，既可以满足Cdc场景，其它实时作业又可以从Kafka复用Cdc消息
 
 8. 完善日志
+
+9. 集成钉钉报警

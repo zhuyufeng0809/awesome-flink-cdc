@@ -9,22 +9,16 @@ import org.apache.flink.util.concurrent.ExecutorThreadFactory;
 
 import com.leqee.etl.internal.dialect.MySqlDialect;
 import com.leqee.etl.internal.event.CdcEvent;
-import com.leqee.etl.internal.event.DDLEvent;
-import com.leqee.etl.internal.event.DMLEvent;
-import com.leqee.etl.internal.event.EventType;
 import com.leqee.etl.util.CdcConfiguration;
 import com.leqee.etl.util.DingDing;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,10 +33,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedFunction, CdcFlushable {
     /**
@@ -50,7 +40,7 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
      * because LinkedBlockingDeque does not need to initial capacity and has higher throughput.
      * Each {@link java.util.concurrent.BlockingQueue} buffers data of one table
      */
-    private Map<String, BlockingQueue<CdcEvent>> buffer;
+    private Map<String, BlockingQueue<String>> buffer;
 
     /**
      * use for spill flush
@@ -123,7 +113,7 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
         );
     }
 
-    private void submitToThreadPool(String identifier, BlockingQueue<CdcEvent> buffer) {
+    private void submitToThreadPool(String identifier, BlockingQueue<String> buffer) {
         AtomicInteger counter = getTableActiveThreadCounter(identifier);
         if (counter.get() <= CdcConfiguration.TABLE_ACTIVE_THREAD_NUM) {
             // why limit the active thread num of the same table,
@@ -134,7 +124,7 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
         }
     }
 
-    private void tryLockAndFlush(String identifier, BlockingQueue<CdcEvent> buffer) {
+    private void tryLockAndFlush(String identifier, BlockingQueue<String> buffer) {
         Lock lock = getLock(identifier);
         lock.lock();
         flush(buffer);
@@ -143,129 +133,36 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
     }
 
     @Override
-    public void flush(BlockingQueue<CdcEvent> tableBuffer) {
+    public void flush(BlockingQueue<String> tableBuffer) {
         if (tableBuffer.size() == 0) {
             return;
         }
 
-        List<CdcEvent> batch = new ArrayList<>();
+        List<String> batch = new ArrayList<>();
         tableBuffer.drainTo(batch);
 
-        final EventType[] lastEventType = new EventType[1];
-        final int[] groupSerialNum = {1};
-        final int[] eventSerialNum = {1};
-
-        Map<Integer, List<CdcEvent>> groups = batch.stream()
-                .peek(event -> {
-                    EventType currentType = event.getEventType();
-
-                    if (currentType == lastEventType[0]) {
-                        event.setGroupSerialNum(groupSerialNum[0]);
-                    } else {
-                        event.setGroupSerialNum(++groupSerialNum[0]);
-                        eventSerialNum[0] = 0;
-                    }
-                    event.setEventSerialNum(++eventSerialNum[0]);
-
-                    lastEventType[0] = currentType;
-                }).collect(Collectors.groupingBy(CdcEvent::getGroupSerialNum));
-
-        groups.entrySet()
-                .stream()
-                .sorted(Map.Entry.comparingByKey(Comparator.naturalOrder()))
-                .forEach(group -> {
-                    List<CdcEvent> sortedGroup = group.getValue().stream()
-                            .sorted(Comparator.comparing(CdcEvent::getEventSerialNum, Comparator.naturalOrder()))
-                            .collect(Collectors.toList());
-
-
-                });
-    }
-
-    private void appendToStatement(List<CdcEvent> group, PreparedStatement preparedStatement) {
-        if (group.get(0).getEventType() == EventType.DML) {
-            appendDml(group, preparedStatement);
-        } else {
-            appendDdl(group, preparedStatement);
-        }
-    }
-
-    public void flush(List<CdcEvent> group) {
-        CdcEvent unKnownTypeEvent = group.get(0);
-        String targetTableName = unKnownTypeEvent.getTargetTableName(instance);
-
-        PreparedStatement preparedStatement = null;
-        if (unKnownTypeEvent.getEventType() == EventType.DML) {
-            // fuck, this is a bit of a strange way to get, need refactor
-            List<String> columns = ((DMLEvent) unKnownTypeEvent).getColumns();
-
-            try {
-                preparedStatement =
-                        targetConnection.prepareStatement(MySqlDialect.getUpsertStatement(targetTableName, columns));
-            } catch (SQLException throwables) {
-                throwables.printStackTrace();
-            }
-
-        } else {
-            DDLEvent ddlEvent = ((DDLEvent) unKnownTypeEvent);
-            try {
-                preparedStatement =
-                        targetConnection.prepareStatement(ddlEvent.getDdl().replaceAll(ddlEvent.getTableName(), targetTableName));
-            } catch (SQLException throwables) {
-                throwables.printStackTrace();
-            }
-
-        }
-    }
-
-    private void appendDml(List<CdcEvent> group, PreparedStatement preparedStatement) {
-        // fuck, this `try catch` case is so ugly, need refactor
         try {
-            group.stream()
-                    .map(event -> (DMLEvent) event)
-                    .forEach(dmlEvent -> { // traversal each row
-                        dmlEvent.getRowData()
-                                .forEach(withIndex((column, index) -> { // traversal each column
-                                    try {
-                                        preparedStatement.setObject(index, column.getValue());
-                                    } catch (SQLException throwable) {
-                                        throwable.printStackTrace();
-                                        DingDing.sendMessage(Arrays.toString(throwable.getStackTrace()));
-                                    }
-                                }));
+            Statement statement = targetConnection.createStatement();
 
-                        try {
-                            preparedStatement.addBatch();
-                        } catch (SQLException throwables) {
-                            throwables.printStackTrace();
-                        }
-                    });
-        } catch (Exception e) {
-            e.printStackTrace();
+            batch.forEach(sql -> {
+                try {
+                    statement.addBatch(sql);
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            });
+
+            statement.executeBatch();
+            statement.close();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
-    }
-
-    private void appendDdl(List<CdcEvent> group, PreparedStatement preparedStatement) {
-        group.stream()
-                .map(event -> (DDLEvent) event)
-                .forEach(ddlEvent -> {
-                    String sourceTableName = ddlEvent.getTableName();
-                    String targetTableName = ddlEvent.getTargetTableName(instance);
-                    String ddl = ddlEvent.getDdl();
-
-                    // fuck, this `try catch` case is so ugly, need refactor
-                    try {
-                        preparedStatement.addBatch(ddl.replaceAll(sourceTableName, targetTableName));
-                    } catch (SQLException throwables) {
-                        throwables.printStackTrace();
-                    }
-                });
     }
 
     @Override
     public void invoke(CdcEvent value, Context context) throws Exception {
         String identifier = value.getIdentifier();
-        BlockingQueue<CdcEvent> tableBuffer = getBufferQueue(identifier);
+        BlockingQueue<String> tableBuffer = getBufferQueue(identifier);
 
         writeToBuffer(tableBuffer, value);
 
@@ -309,8 +206,8 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
 
     }
 
-    private void writeToBuffer(BlockingQueue<CdcEvent> tableBuffer, CdcEvent value) throws Exception {
-        tableBuffer.add(value);
+    private void writeToBuffer(BlockingQueue<String> tableBuffer, CdcEvent value) throws Exception {
+        tableBuffer.add(value.getExecutableSql(instance));
     }
 
     private AtomicInteger getTableActiveThreadCounter(String identifier) {
@@ -329,15 +226,15 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
         }
     }
 
-    private BlockingQueue<CdcEvent> getBufferQueue(String identifier) throws Exception {
+    private BlockingQueue<String> getBufferQueue(String identifier) throws Exception {
         return getOrCreateBufferQueue(identifier);
     }
 
-    private BlockingQueue<CdcEvent> getOrCreateBufferQueue(String identifier) throws Exception {
-        BlockingQueue<CdcEvent> bufferQueue = buffer.get(identifier);
+    private BlockingQueue<String> getOrCreateBufferQueue(String identifier) throws Exception {
+        BlockingQueue<String> bufferQueue = buffer.get(identifier);
 
         if (bufferQueue == null) {
-            BlockingQueue<CdcEvent> newBufferQueue = new LinkedBlockingQueue<>();
+            BlockingQueue<String> newBufferQueue = new LinkedBlockingQueue<>();
             buffer.put(identifier, newBufferQueue);
 
             // If sink internal does not hold table buffer queue,
@@ -432,13 +329,5 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
             DingDing.sendMessage(message);
             throwable.printStackTrace();
         }
-    }
-
-    private <T> Consumer<T> withIndex(BiConsumer<T, Integer> consumer) {
-        class IndexObject {
-            int index = 1;
-        }
-        IndexObject indexObject = new IndexObject();
-        return i -> consumer.accept(i, indexObject.index++);
     }
 }

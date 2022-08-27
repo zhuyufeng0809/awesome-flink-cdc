@@ -1,5 +1,7 @@
 package com.leqee.etl.internal.event;
 
+import com.leqee.etl.internal.dialect.JdbcValueFormatter;
+import com.leqee.etl.internal.dialect.MySqlDialect;
 import io.debezium.data.Envelope;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -29,6 +31,19 @@ public class DMLEvent extends CdcEvent {
                 .stream()
                 .map(Column::getName)
                 .collect(Collectors.toList());
+    }
+
+    public List<String> getValues() {
+        return getRowData().stream().map(Column::getValue)
+                .map(JdbcValueFormatter::format)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public String getExecutableSql(String instance) {
+        return MySqlDialect.getUpsertStatement(getTargetTableName(instance),
+                getColumns(),
+                getValues());
     }
 
     public static Boolean isDelOperation(String op) {

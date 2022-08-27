@@ -1,5 +1,7 @@
 package com.leqee.etl.internal.event;
 
+import com.leqee.etl.internal.dialect.JdbcValueFormatter;
+import com.leqee.etl.util.CdcConfiguration;
 import com.leqee.etl.util.JsonConvertor;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -16,6 +18,14 @@ public class DDLEvent extends CdcEvent {
 
     public String getDdl() {
         return ddl;
+    }
+
+    @Override
+    public String getExecutableSql(String instance) {
+        String ddl = getDdl()
+                .replaceAll(getDb(), CdcConfiguration.TARGET_INSTANCE_SCHEMA)
+                .replaceAll(getTableName(), getTargetTableName(instance));
+        return JdbcValueFormatter.format(ddl);
     }
 
     @Override

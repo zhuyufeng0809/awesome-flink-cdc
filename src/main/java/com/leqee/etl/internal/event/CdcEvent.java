@@ -9,8 +9,6 @@ public class CdcEvent {
     String db;
     String tableName;
     Long time;
-    Integer groupSerialNum;
-    Integer eventSerialNum;
 
     protected CdcEvent(String db, String tableName, Long time) {
         this.db = db;
@@ -42,22 +40,8 @@ public class CdcEvent {
         return String.join("_", instance, getDb(), getTableName());
     }
 
-    public Integer getGroupSerialNum() {
-        return groupSerialNum;
-    }
-
-    public CdcEvent setGroupSerialNum(Integer groupSerialNum) {
-        this.groupSerialNum = groupSerialNum;
-        return this;
-    }
-
-    public Integer getEventSerialNum() {
-        return eventSerialNum;
-    }
-
-    public CdcEvent setEventSerialNum(Integer eventSerialNum) {
-        this.eventSerialNum = eventSerialNum;
-        return this;
+    public String getExecutableSql(String instance) {
+        return null;
     }
 
     public static Boolean isDdlEvent(SourceRecord record) {

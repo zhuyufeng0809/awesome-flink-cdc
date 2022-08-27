@@ -6,32 +6,29 @@ import java.util.stream.Collectors;
 public class MySqlDialect {
 
     public static String getUpsertStatement(
-            String tableName, List<String> fieldNames) {
+            String tableName, List<String> fieldNames, List<String> fieldValues) {
         String updateClause = fieldNames
                         .stream()
                         .map(f -> quoteIdentifier(f) + "=VALUES(" + quoteIdentifier(f) + ")")
                         .collect(Collectors.joining(", "));
-        return getInsertIntoStatement(tableName, fieldNames)
+        return getInsertIntoStatement(tableName, fieldNames, fieldValues)
                 + " ON DUPLICATE KEY UPDATE "
                 + updateClause;
     }
 
-    private static String getInsertIntoStatement(String tableName, List<String> fieldNames) {
+    private static String getInsertIntoStatement(String tableName, List<String> fieldNames, List<String> fieldValues) {
         String columns = fieldNames
                         .stream()
                         .map(MySqlDialect::quoteIdentifier)
                         .collect(Collectors.joining(", "));
-        String placeholders = fieldNames
-                        .stream()
-                        .map(f -> "?")
-                        .collect(Collectors.joining(", "));
+        String literal = String.join(", ", fieldValues);
         return "INSERT INTO "
                 + quoteIdentifier(tableName)
                 + "("
                 + columns
                 + ")"
                 + " VALUES ("
-                + placeholders
+                + literal
                 + ")";
     }
 
