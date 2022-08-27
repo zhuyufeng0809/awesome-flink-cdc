@@ -41,6 +41,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedFunction, CdcFlushable {
@@ -176,8 +177,17 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
                     List<CdcEvent> sortedGroup = group.getValue().stream()
                             .sorted(Comparator.comparing(CdcEvent::getEventSerialNum, Comparator.naturalOrder()))
                             .collect(Collectors.toList());
-                    flush(sortedGroup);
+
+
                 });
+    }
+
+    private void appendToStatement(List<CdcEvent> group, PreparedStatement preparedStatement) {
+        if (group.get(0).getEventType() == EventType.DML) {
+            appendDml(group, preparedStatement);
+        } else {
+            appendDdl(group, preparedStatement);
+        }
     }
 
     public void flush(List<CdcEvent> group) {
@@ -196,7 +206,6 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
                 throwables.printStackTrace();
             }
 
-            flushDml(group, preparedStatement);
         } else {
             DDLEvent ddlEvent = ((DDLEvent) unKnownTypeEvent);
             try {
@@ -206,11 +215,10 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
                 throwables.printStackTrace();
             }
 
-            flushDdl();
         }
     }
 
-    private void flushDml(List<CdcEvent> group, PreparedStatement preparedStatement) {
+    private void appendDml(List<CdcEvent> group, PreparedStatement preparedStatement) {
         // fuck, this `try catch` case is so ugly, need refactor
         try {
             group.stream()
@@ -232,15 +240,26 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
                             throwables.printStackTrace();
                         }
                     });
-
-            preparedStatement.executeBatch();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void flushDdl() {
+    private void appendDdl(List<CdcEvent> group, PreparedStatement preparedStatement) {
+        group.stream()
+                .map(event -> (DDLEvent) event)
+                .forEach(ddlEvent -> {
+                    String sourceTableName = ddlEvent.getTableName();
+                    String targetTableName = ddlEvent.getTargetTableName(instance);
+                    String ddl = ddlEvent.getDdl();
 
+                    // fuck, this `try catch` case is so ugly, need refactor
+                    try {
+                        preparedStatement.addBatch(ddl.replaceAll(sourceTableName, targetTableName));
+                    } catch (SQLException throwables) {
+                        throwables.printStackTrace();
+                    }
+                });
     }
 
     @Override

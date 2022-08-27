@@ -18,49 +18,80 @@
 
 package com.leqee.etl;
 
-import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.api.common.restartstrategy.RestartStrategies;
-import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
-import com.leqee.etl.internal.serialisation.CdcEventDebeziumDeserializeSchema;
-import com.leqee.etl.internal.event.CdcEvent;
-import com.leqee.etl.sink.CdcSink;
-import com.ververica.cdc.connectors.mysql.source.MySqlSource;
-import com.ververica.cdc.connectors.mysql.table.StartupOptions;
-import com.ververica.cdc.debezium.JsonDebeziumDeserializationSchema;
+import com.leqee.etl.util.CdcConfiguration;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 public class Application {
 
 	private static final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
+	private final Connection targetConnection;
+
+	public Application() {
+		this.targetConnection = getConnection(
+		);
+	}
+
+	private Connection getConnection() {
+		try {
+			return DriverManager.getConnection(CdcConfiguration.TARGET_INSTANCE_URL, CdcConfiguration.TARGET_INSTANCE_USER, CdcConfiguration.TARGET_INSTANCE_PWD);
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+
+		return null;
+	}
+
+	private void test() {
+		String sql = "insert into dev_caleb.dbz_test(new_column) values(?)";
+		String sql2 = "insert into dev_caleb.dbz_test(my_column, new_column) values(?, ?)";
+		try {
+			PreparedStatement statement = targetConnection.prepareStatement(sql);
+			statement.setObject(1, 20);
+			statement.addBatch();
+			statement.addBatch("alter table dev_caleb.`dbz_test` modify `my_column` varchar(100) DEFAULT NULL comment 'test commentsssss'");
+
+
+			statement.addBatch(sql2);
+
+			statement.setObject(1, 30);
+			statement.executeBatch();
+		} catch (SQLException throwables) {
+			throwables.printStackTrace();
+		}
+
+
+	}
+
 	public static void main(String[] args) throws Exception {
-		MySqlSource<CdcEvent> mySqlSource = MySqlSource.<CdcEvent>builder()
-				.hostname("localhost")
-				.port(3306)
-				.username("root")
-				.password("tianlong.234")
-				.databaseList("dev_caleb")
-				.tableList("dev_caleb.dbz_test")
-				.serverTimeZone("Asia/Shanghai")
-				.deserializer(new CdcEventDebeziumDeserializeSchema())
-				.startupOptions(StartupOptions.latest())
-				.includeSchemaChanges(true)
-				.build();
+		Application application = new Application();
 
-
-		env.setRestartStrategy(RestartStrategies.noRestart());
-
-		env.enableCheckpointing(60000, CheckpointingMode.EXACTLY_ONCE);
-
-		env.fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), "MySQL CDC Source")
-		.addSink(new CdcSink("local"));
-		env.execute("Print MySQL Snapshot + Binlog");
+		application.test();
+//		MySqlSource<CdcEvent> mySqlSource = MySqlSource.<CdcEvent>builder()
+//				.hostname("localhost")
+//				.port(3306)
+//				.username("root")
+//				.databaseList("dev_caleb")
+//				.tableList("dev_caleb.dbz_test")
+//				.serverTimeZone("Asia/Shanghai")
+//				.deserializer(new CdcEventDebeziumDeserializeSchema())
+//				.startupOptions(StartupOptions.latest())
+//				.includeSchemaChanges(true)
+//				.build();
+//
+//
+//		env.setRestartStrategy(RestartStrategies.noRestart());
+//
+//		env.enableCheckpointing(60000, CheckpointingMode.EXACTLY_ONCE);
+//
+//		env.fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), "MySQL CDC Source")
+//		.addSink(new CdcSink("local"));
+//		env.execute("Print MySQL Snapshot + Binlog");
 	}
 }

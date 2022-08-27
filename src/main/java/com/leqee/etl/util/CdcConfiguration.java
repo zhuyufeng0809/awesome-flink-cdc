@@ -26,10 +26,10 @@ public class CdcConfiguration {
 
     public static final String SOURCE_INSTANCE_URL = "jdbc:mysql://localhost:3306";
     public static final String SOURCE_INSTANCE_USER = "root";
-    public static final String SOURCE_INSTANCE_PWD = "tianlong.234";
+    public static final String SOURCE_INSTANCE_PWD = "";
     public static final String TARGET_INSTANCE_URL = "jdbc:mysql://localhost:3306/cdc?useServerPrepStmts=false&rewriteBatchedStatements=true&serverTimezone=Asia/Shanghai";
     public static final String TARGET_INSTANCE_USER = "root";
-    public static final String TARGET_INSTANCE_PWD = "tianlong.234";
+    public static final String TARGET_INSTANCE_PWD = "";
     public static final String TARGET_INSTANCE_SCHEMA = "cdc";
 
     public static final Integer EXECUTOR_CORE_POOL_SIZE = 8;
