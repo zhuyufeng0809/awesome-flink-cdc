@@ -34,7 +34,8 @@ public class DMLEvent extends CdcEvent {
     }
 
     public List<String> getValues() {
-        return getRowData().stream().map(Column::getValue)
+        return getRowData().stream()
+                .map(Column::getValue)
                 .map(JdbcValueFormatter::format)
                 .collect(Collectors.toList());
     }

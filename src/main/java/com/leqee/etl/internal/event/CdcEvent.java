@@ -41,7 +41,7 @@ public class CdcEvent {
     }
 
     public String getExecutableSql(String instance) {
-        return null;
+        return "";
     }
 
     public static Boolean isDdlEvent(SourceRecord record) {

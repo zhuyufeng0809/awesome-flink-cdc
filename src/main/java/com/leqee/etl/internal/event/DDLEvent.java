@@ -1,6 +1,6 @@
 package com.leqee.etl.internal.event;
 
-import com.leqee.etl.internal.dialect.JdbcValueFormatter;
+import com.leqee.etl.internal.dialect.MySqlDialect;
 import com.leqee.etl.util.CdcConfiguration;
 import com.leqee.etl.util.JsonConvertor;
 import org.apache.kafka.connect.data.Struct;
@@ -22,10 +22,22 @@ public class DDLEvent extends CdcEvent {
 
     @Override
     public String getExecutableSql(String instance) {
-        String ddl = getDdl()
-                .replaceAll(getDb(), CdcConfiguration.TARGET_INSTANCE_SCHEMA)
-                .replaceAll(getTableName(), getTargetTableName(instance));
-        return JdbcValueFormatter.format(ddl);
+        String ddl = getDdl();
+        String targetTableName = getTargetTableName(instance);
+        switch (SpecialDDLKeyWord.forCode(ddl)) {
+            case TRUNCATE:
+                ddl = MySqlDialect.handleTruncate(targetTableName);
+                break;
+            case DROP_TABLE:
+                ddl = MySqlDialect.handleDropTable(targetTableName);
+                break;
+            case OTHER:
+            default:
+                ddl = getDdl()
+                        .replaceAll(getDb(), CdcConfiguration.TARGET_INSTANCE_SCHEMA)
+                        .replaceAll(getTableName(), targetTableName);
+        }
+        return ddl;
     }
 
     @Override
@@ -37,6 +49,31 @@ public class DDLEvent extends CdcEvent {
                 ", time=" + time +
                 ", ddl='" + ddl + '\'' +
                 '}';
+    }
+
+    private enum SpecialDDLKeyWord {
+        TRUNCATE("truncate"),
+        DROP_TABLE("drop table"),
+        OTHER("other");
+
+        private final String keyWord;
+
+        SpecialDDLKeyWord(String keyWord) {
+            this.keyWord = keyWord;
+        }
+
+        private static SpecialDDLKeyWord forCode(String ddl) {
+            for (SpecialDDLKeyWord keyWord : SpecialDDLKeyWord.values()) {
+                if (ddl.toLowerCase().contains(keyWord.getKeyWord())) {
+                    return keyWord;
+                }
+            }
+            return OTHER;
+        }
+
+        private String getKeyWord() {
+            return keyWord;
+        }
     }
 
     public static class Builder extends CdcEvent.Builder {

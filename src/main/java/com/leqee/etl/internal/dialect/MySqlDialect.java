@@ -1,5 +1,9 @@
 package com.leqee.etl.internal.dialect;
 
+import com.leqee.etl.util.CdcConfiguration;
+
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,12 +41,47 @@ public class MySqlDialect {
     }
 
     public static String isDelColumn(String targetTableName) {
-        final String isDel = "ALTER TABLE %s ADD is_del TINYINT NOT NULL DEFAULT 0";
-        return String.format(isDel, quoteIdentifier(targetTableName));
+        final String isDel = "ALTER TABLE %s.%s ADD is_del TINYINT NOT NULL DEFAULT 0";
+        return String.format(isDel,
+                quoteIdentifier(CdcConfiguration.TARGET_INSTANCE_SCHEMA),
+                quoteIdentifier(targetTableName));
+    }
+
+    public static String isDelIndex(String targetTableName) {
+        final String index = "ALTER TABLE %s.%s ADD INDEX idx_is_del (is_del)";
+        return String.format(index,
+                quoteIdentifier(CdcConfiguration.TARGET_INSTANCE_SCHEMA),
+                quoteIdentifier(targetTableName));
     }
 
     public static String etlTimeColumn(String targetTableName) {
-        final String etlTime = "ALTER TABLE %s ADD etl_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP";
-        return String.format(etlTime, quoteIdentifier(targetTableName));
+        final String etlTime = "ALTER TABLE %s.%s ADD etl_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP";
+        return String.format(etlTime,
+                quoteIdentifier(CdcConfiguration.TARGET_INSTANCE_SCHEMA),
+                quoteIdentifier(targetTableName));
+    }
+
+    public static String etlTimeIndex(String targetTableName) {
+        final String index = "ALTER TABLE %s.%s ADD INDEX idx_etl_time (etl_time)";
+        return String.format(index,
+                quoteIdentifier(CdcConfiguration.TARGET_INSTANCE_SCHEMA),
+                quoteIdentifier(targetTableName));
+    }
+
+    public static String handleTruncate(String targetTableName) {
+        final String update = "UPDATE %s.%s SET is_del = 1";
+        return String.format(update,
+                quoteIdentifier(CdcConfiguration.TARGET_INSTANCE_SCHEMA),
+                quoteIdentifier(targetTableName));
+    }
+
+    public static String handleDropTable(String targetTableName) {
+        final String rename = "ALTER TABLE %s.%s RENAME TO %s";
+        String nowTimestamp = String.valueOf(LocalDateTime.now().toEpochSecond(ZoneOffset.of("+8")));
+        String newTargetTableName = String.join("_", targetTableName, "bak", nowTimestamp);
+        return String.format(rename,
+                quoteIdentifier(CdcConfiguration.TARGET_INSTANCE_SCHEMA),
+                quoteIdentifier(targetTableName),
+                quoteIdentifier(newTargetTableName));
     }
 }

@@ -39,7 +39,7 @@
 
   多线程并发写入数据库，每次Flush由一个线程负责一个Table，Table之间互不影响。这样设计的意义有两点：
 
-  1. 当一个表在目标库执行长时间事务或者DDL时，不会影响其他表的数据同步
+  1. 表与表之间解耦，当一个表在目标库执行长时间事务或者DDL时，不会影响其他表的数据同步
   2. 提高吞吐量
 
 * 自动创建目标表
@@ -60,10 +60,11 @@
 
   可直接拿到源库DDL变更语句，更简洁优雅地处理Schema变更。可处理各种五花八门的DDL语句，包括：
 
+  * `Column add/drop/modify`
+  * `Regular Key/Index add/drop/modify`
+  * `Unique/Primary Key add/drop/modify`
   * `Drop table`
-  * `Unique Key`变更
-  * `Table name`变更
-  * `Truncate`操作
+  * `Truncate`
   * ...
 
 ### How to use
@@ -87,24 +88,29 @@
 
    1. 如果同时存在唯一键和主键，优先使用唯一键
    2. 如果唯一键和主键都没有，则该表所有数据都发送到subtask-0处理
-
-
+   
    此方案处理DDL时可能有数据一致性问题，并且端到端精准一次同样很难保证，还需要考虑唯一键字段为null的情况
 
-3. 动态修改配置
+3. 支持更多的`Schema evolution`
+
+   * 支持`Table/Schema name`变更
+
+     目前的实现中，不同表的消息按照`Schema.Table`格式的唯一标识符放入不同的队列中，当出现`Table/Schema rname`的操作时，收到消息中的`db\table`字段已经是更新后的了，所以再根据消息字段生成的唯一标识符无法放到该表所在的队列中去
+
+4. 动态修改配置
 
    使用广播流或者集成`Nacos`
 
-4. 配置Json化
+5. 配置Json化
 
    启动Json时，传入Json字符串或者文件，类似Kafka Connect的方式，避免代码中硬编码
 
-5. 支持写入`Hudi`
+6. 支持写入`Hudi`
 
-6. 消息复用
+7. 消息复用
 
    支持双写到MySQL和Kafka，既可以满足Cdc场景，其它实时作业又可以从Kafka复用Cdc消息
 
-7. 完善日志
+8. 完善日志
 
-8. 集成钉钉报警
+9. 集成钉钉报警

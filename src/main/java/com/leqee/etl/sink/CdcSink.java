@@ -147,8 +147,8 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
             batch.forEach(sql -> {
                 try {
                     statement.addBatch(sql);
-                } catch (SQLException throwables) {
-                    throwables.printStackTrace();
+                } catch (SQLException throwable) {
+                    throwable.printStackTrace();
                 }
             });
 
@@ -175,6 +175,7 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
     @Override
     public void close() throws Exception {
         shutdownSchedulerAndAllFutures()
+                .shutdownThreadPool()
                 .flushAllLeftBuffer()
                 .closeDb();
     }
@@ -185,8 +186,13 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
         return this;
     }
 
+    private CdcSink shutdownThreadPool() {
+        threadPool.shutdown();
+        return this;
+    }
+
     private CdcSink flushAllLeftBuffer() {
-        buffer.values().forEach(this::flush);
+        buffer.forEach(this::tryLockAndFlush);
         return this;
     }
 
@@ -206,7 +212,7 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
 
     }
 
-    private void writeToBuffer(BlockingQueue<String> tableBuffer, CdcEvent value) throws Exception {
+    private void writeToBuffer(BlockingQueue<String> tableBuffer, CdcEvent value) {
         tableBuffer.add(value.getExecutableSql(instance));
     }
 
@@ -302,30 +308,25 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
                         MySqlDialect.quoteIdentifier(CdcConfiguration.TARGET_INSTANCE_SCHEMA),
                         MySqlDialect.quoteIdentifier(targetTableName)
                         ));
+        String isDelColumn = MySqlDialect.isDelColumn(targetTableName);
+        String etlTimeColumn = MySqlDialect.etlTimeColumn(targetTableName);
+        String isDelIndex = MySqlDialect.isDelIndex(targetTableName);
+        String etlTimeIndex = MySqlDialect.etlTimeIndex(targetTableName);
+        // `try catch` is fucking so ugly
         try {
-            targetConnection.createStatement().execute(targetTableDdl);
+            Statement statement = targetConnection.createStatement();
+            statement.addBatch(targetTableDdl);
+            statement.addBatch(isDelColumn);
+            statement.addBatch(etlTimeColumn);
+            statement.addBatch(isDelIndex);
+            statement.addBatch(etlTimeIndex);
+
+            statement.executeBatch();
+            statement.close();
         } catch (SQLException throwable) {
             String message = String.format("fail to create target table, the source table ddl is \n%s\n the target table ddl is \n%s\n",
                     originalDdl,
                     targetTableDdl);
-            DingDing.sendMessage(message);
-            throwable.printStackTrace();
-        }
-
-        addAuxiliaryColumns(targetTableName);
-    }
-
-    private void addAuxiliaryColumns(String targetTableName) {
-        try {
-            Statement statement = targetConnection.createStatement();
-            statement.execute(MySqlDialect.isDelColumn(targetTableName));
-            statement.execute(MySqlDialect.etlTimeColumn(targetTableName));
-            statement.close();
-        } catch (SQLException throwable) {
-            String message = String.join("",
-                    "fail to add auxiliary columns, for more information, please see below \n",
-                    throwable.getSQLState()
-                    );
             DingDing.sendMessage(message);
             throwable.printStackTrace();
         }
