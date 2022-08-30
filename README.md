@@ -2,7 +2,7 @@
 
 ### 原理
 
-![thread-model](/Users/zhuyufeng/Downloads/thread-model.png)
+![thread-model](picture/thread-model.png)
 
 ```java
 // 淦，好久没画图了，已经不知道怎么画比较合适了
