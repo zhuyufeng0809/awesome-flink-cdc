@@ -2,15 +2,32 @@
 
 ### 原理
 
+![thread-model](/Users/zhuyufeng/Downloads/thread-model.png)
+
 ```java
-// todo
+// 淦，好久没画图了，已经不知道怎么画比较合适了
 ```
+
+图中不同的颜色表示不同的角色：
+
+* 蓝色：表示任务提交者
+  * `SubTask-Thread`：执行Flink SubTask的线程，调用`invoke`方法，在方法中检查某个Table的Buffer Queue是否超过阈值，如果超过则创建`Runnable`实例提交到线程池，进行Flush
+  * `Scheduled-thread`：定时调度的线程，按指定的时间间隔，为**所有有元素的**Table Buffer Queue创建`Runnable`实例并提交到线程池Flush，无元素的Buffer Queue不会生成`Runnable`实例
+* 粉色：Flush方法，实现了具体写入外部数据库的逻辑
+* 绿色：执行Flush Task的线程池
+* 黄色：缓冲Table DDL与DML消息的Queue，每个Table有各自的Queue
 
 #### 并发与线程同步
 
-```java
-// todo
-```
+并发：
+
+* Table之间是并发的，并且相互之间完全无影响（因为Buffer Queue是独立的）
+* 同一个Table的不同Flush策略是并发的，因为线程安全问题（Flush同一个Buffer Queue），并发线程之间需要争抢同一把锁
+
+同步：
+
+* Buffer Queue的读写是多线程的，写操作在`SubTask-Thread`线程中，读操作在执行`Flush`方法的线程中，线程安全由阻塞队列保证
+* 同一个表会有多个`Runnable`实例去调用Flush方法，对同一个表来说，Flush方法一定是要串行的（防止后到的数据先执行）。为每个表设置一个锁，对该表进行Flush的线程首先需要拿到锁，以此保证对同一个表的Flush操作是串行的
 
 ### 优势与特性
 

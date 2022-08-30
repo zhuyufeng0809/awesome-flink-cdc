@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
 
 public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedFunction, CdcFlushable {
     /**
@@ -96,7 +97,11 @@ public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedF
                         1, new ExecutorThreadFactory("scheduled-flush task submitter"));
         this.scheduledFuture =
                 this.scheduler.scheduleWithFixedDelay(
-                        () -> buffer.forEach(this::submitToThreadPool),
+                        () -> buffer.forEach((identifier, buffer) -> {
+                            if (buffer.size() > 0) {
+                                tryLockAndFlush(identifier, buffer);
+                            }
+                        }),
                         CdcConfiguration.FLUSH_INTERVAL.getSeconds(),
                         CdcConfiguration.FLUSH_INTERVAL.getSeconds(),
                         TimeUnit.SECONDS);
