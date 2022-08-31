@@ -2,7 +2,7 @@
 
 ### 原理
 
-![thread-model](picture/thread-model.png)
+![thread-model](https://raw.githubusercontent.com/zhuyufeng0809/my-image-hosting-service/master/uPic/thread-model.png)
 
 ```java
 // 淦，好久没画图了，已经不知道怎么画比较合适了
