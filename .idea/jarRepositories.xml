@@ -12,16 +12,6 @@
       <option name="url" value="https://repo.maven.apache.org/maven2" />
     </remote-repository>
     <remote-repository>
-      <option name="id" value="leqee-public" />
-      <option name="name" value="leqee-public" />
-      <option name="url" value="https://nexus.leqee.com/repository/public" />
-    </remote-repository>
-    <remote-repository>
-      <option name="id" value="leqee-thirdparty" />
-      <option name="name" value="leqee-thirdparty" />
-      <option name="url" value="https://nexus.leqee.com/repository/thirdparty" />
-    </remote-repository>
-    <remote-repository>
       <option name="id" value="apache.snapshots" />
       <option name="name" value="Apache Development Snapshot Repository" />
       <option name="url" value="https://repository.apache.org/content/repositories/snapshots/" />
