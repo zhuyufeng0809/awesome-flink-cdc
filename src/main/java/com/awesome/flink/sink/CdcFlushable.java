@@ -1,4 +1,4 @@
-package com.leqee.etl.sink;
+package com.awesome.flink.sink;
 
 import java.io.Flushable;
 import java.io.IOException;

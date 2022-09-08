@@ -1,4 +1,4 @@
-package com.leqee.etl.sink;
+package com.awesome.flink.sink;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
@@ -7,10 +7,10 @@ import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.util.concurrent.ExecutorThreadFactory;
 
-import com.leqee.etl.internal.dialect.MySqlDialect;
-import com.leqee.etl.internal.event.CdcEvent;
-import com.leqee.etl.util.CdcConfiguration;
-import com.leqee.etl.util.DingDing;
+import com.awesome.flink.util.CdcConfiguration;
+import com.awesome.flink.internal.dialect.MySqlDialect;
+import com.awesome.flink.internal.event.CdcEvent;
+import com.awesome.flink.util.DingDing;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BiConsumer;
 
 public class CdcSink extends RichSinkFunction<CdcEvent> implements CheckpointedFunction, CdcFlushable {
     /**

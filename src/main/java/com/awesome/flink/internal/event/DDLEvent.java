@@ -1,8 +1,8 @@
-package com.leqee.etl.internal.event;
+package com.awesome.flink.internal.event;
 
-import com.leqee.etl.internal.dialect.MySqlDialect;
-import com.leqee.etl.util.CdcConfiguration;
-import com.leqee.etl.util.JsonConvertor;
+import com.awesome.flink.internal.dialect.MySqlDialect;
+import com.awesome.flink.util.CdcConfiguration;
+import com.awesome.flink.util.JsonConvertor;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.source.SourceRecord;
 

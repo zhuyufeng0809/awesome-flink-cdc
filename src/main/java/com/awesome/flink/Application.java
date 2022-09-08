@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-package com.leqee.etl;
+package com.awesome.flink;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
-import com.leqee.etl.internal.event.CdcEvent;
-import com.leqee.etl.internal.serialisation.CdcEventDebeziumDeserializeSchema;
-import com.leqee.etl.sink.CdcSink;
+import com.awesome.flink.internal.event.CdcEvent;
+import com.awesome.flink.internal.serialisation.CdcEventDebeziumDeserializeSchema;
+import com.awesome.flink.sink.CdcSink;
 import com.ververica.cdc.connectors.mysql.source.MySqlSource;
 import com.ververica.cdc.connectors.mysql.table.StartupOptions;
 

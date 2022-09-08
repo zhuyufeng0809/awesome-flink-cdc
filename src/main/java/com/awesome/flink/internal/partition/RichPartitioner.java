@@ -1,4 +1,4 @@
-package com.leqee.etl.internal.partition;
+package com.awesome.flink.internal.partition;
 
 import org.apache.flink.api.common.functions.AbstractRichFunction;
 import org.apache.flink.api.common.functions.Partitioner;

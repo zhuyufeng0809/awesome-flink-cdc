@@ -1,4 +1,4 @@
-package com.leqee.etl.internal.event;
+package com.awesome.flink.internal.event;
 
 import io.debezium.data.Envelope;
 import org.apache.kafka.connect.data.Struct;

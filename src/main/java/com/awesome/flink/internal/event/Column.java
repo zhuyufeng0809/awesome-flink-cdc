@@ -1,4 +1,4 @@
-package com.leqee.etl.internal.event;
+package com.awesome.flink.internal.event;
 
 import com.google.common.base.Objects;
 

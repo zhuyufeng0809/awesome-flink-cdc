@@ -1,6 +1,6 @@
-package com.leqee.etl.internal.dialect;
+package com.awesome.flink.internal.dialect;
 
-import com.leqee.etl.util.CdcConfiguration;
+import com.awesome.flink.util.CdcConfiguration;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;

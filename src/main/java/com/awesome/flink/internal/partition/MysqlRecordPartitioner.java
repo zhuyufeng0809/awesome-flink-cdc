@@ -1,4 +1,4 @@
-package com.leqee.etl.internal.partition;
+package com.awesome.flink.internal.partition;
 
 import java.util.Optional;
 

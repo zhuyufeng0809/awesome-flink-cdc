@@ -1,4 +1,4 @@
-package com.leqee.etl.internal.concurrent;
+package com.awesome.flink.internal.concurrent;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;

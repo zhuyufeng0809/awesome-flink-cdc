@@ -1,7 +1,7 @@
-package com.leqee.etl.internal.event;
+package com.awesome.flink.internal.event;
 
-import com.leqee.etl.internal.dialect.JdbcValueFormatter;
-import com.leqee.etl.internal.dialect.MySqlDialect;
+import com.awesome.flink.internal.dialect.JdbcValueFormatter;
+import com.awesome.flink.internal.dialect.MySqlDialect;
 import io.debezium.data.Envelope;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.source.SourceRecord;

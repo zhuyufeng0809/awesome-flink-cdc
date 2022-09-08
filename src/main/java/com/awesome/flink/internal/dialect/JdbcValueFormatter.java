@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.leqee.etl.internal.dialect;
+package com.awesome.flink.internal.dialect;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;

@@ -1,11 +1,11 @@
-package com.leqee.etl.internal.serialisation;
+package com.awesome.flink.internal.serialisation;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.util.Collector;
 
-import com.leqee.etl.internal.event.CdcEvent;
-import com.leqee.etl.internal.event.DDLEvent;
-import com.leqee.etl.internal.event.DMLEvent;
+import com.awesome.flink.internal.event.DDLEvent;
+import com.awesome.flink.internal.event.CdcEvent;
+import com.awesome.flink.internal.event.DMLEvent;
 import com.ververica.cdc.debezium.DebeziumDeserializationSchema;
 import org.apache.kafka.connect.source.SourceRecord;
 
@@ -16,8 +16,7 @@ public class CdcEventDebeziumDeserializeSchema implements DebeziumDeserializatio
     public void deserialize(SourceRecord record, Collector<CdcEvent> out) throws Exception {
         CdcEvent event;
         if (CdcEvent.isDdlEvent(record)) {
-            event = new DDLEvent
-                    .Builder(record)
+            event = new DDLEvent.Builder(record)
                     .extractDdl()
                     .build();
         } else {

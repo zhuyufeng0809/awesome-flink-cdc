@@ -1,4 +1,4 @@
-package com.leqee.etl.util;
+package com.awesome.flink.util;
 
 import java.time.Duration;
 
